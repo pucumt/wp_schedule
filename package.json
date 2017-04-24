@@ -1,0 +1,19 @@
+{
+    "name": "GL-schedule",
+    "version": "1.0.0",
+    "private": true,
+    "description": "BFB Schedule",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/pucumt/GL-schedule.git"
+    },
+    "license": "GPL",
+    "scripts": {
+        "start": "node app.js",
+        "test": "node-debug app.js"
+    },
+    "dependencies": {
+        "mongoose": "4.7.4",
+        "node-schedule": "1.2.1"
+    }
+}
