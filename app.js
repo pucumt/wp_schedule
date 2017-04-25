@@ -1,4 +1,5 @@
 var AdminEnrollTrain = require('./adminEnrollTrain.js'),
+    TrainClass = require('./trainClass.js'),
     schedule = require('node-schedule');
 
 function scheduleCronstyle() {
@@ -7,8 +8,13 @@ function scheduleCronstyle() {
         AdminEnrollTrain.getUnpays().then(function(orders) {
             if (orders && orders.length > 0) {
                 orders.forEach(function(order) {
-                    AdminEnrollTrain.cancel(order._id);
-                    //send message back to swiftpass
+                    TrainClass.cancel(order.trainId)
+                        .then(function(resultTrainClass) {
+                            if (resultTrainClass && resultTrainClass.ok && resultTrainClass.nModified == 1) {
+                                AdminEnrollTrain.cancel(order._id);
+                                //send message back to swiftpass
+                            }
+                        });
                 });
             }
         });
