@@ -1,6 +1,7 @@
 var AdminEnrollTrain = require('./adminEnrollTrain.js'),
     TrainClass = require('./trainClass.js'),
     schedule = require('node-schedule'),
+    settings = require('./settings.js'),
     request = require('request');
 
 function scheduleCronstyle() {
