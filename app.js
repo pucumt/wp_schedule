@@ -1,8 +1,10 @@
 var AdminEnrollTrain = require('./adminEnrollTrain.js'),
     TrainClass = require('./trainClass.js'),
+    CouponAssign = require('./couponAssign.js'),
     schedule = require('node-schedule'),
     settings = require('./settings.js'),
-    request = require('request');
+    request = require('request'),
+    crypto = require('crypto');
 
 function scheduleCronstyle() {
     schedule.scheduleJob('0 * * * * *', function() {
@@ -14,6 +16,7 @@ function scheduleCronstyle() {
                         .then(function(resultTrainClass) {
                             if (resultTrainClass && resultTrainClass.ok && resultTrainClass.nModified == 1) {
                                 AdminEnrollTrain.cancel(order._id).then(function() {
+                                    CouponAssign.release(order._id);
                                     //send message back to swiftpass
                                     closeOrder(order._id);
                                 });
