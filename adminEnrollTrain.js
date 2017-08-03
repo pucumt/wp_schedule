@@ -42,7 +42,7 @@ AdminEnrollTrain.cancel = function(id) {
 
 AdminEnrollTrain.getUnpays = function() {
     var now = new Date();
-    now.setTime(now.getTime() - 600 * 1000);
+    now.setTime(now.getTime() - 1200000); //20 minutes
     var filter = {
         isDeleted: { $ne: true },
         isSucceed: 1,
