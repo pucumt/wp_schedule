@@ -1,60 +1,180 @@
-var mongoose = require('./db');
-var db = mongoose.connection;
+// 开设的课程，属性比较多且目前在一个表里
 
-var trainClassSchema = new mongoose.Schema({
-    name: String,
-    yearId: String,
-    yearName: String,
-    gradeId: String,
-    gradeName: String,
-    subjectId: String,
-    subjectName: String,
-    categoryId: String,
-    categoryName: String,
-    totalStudentCount: { type: Number, default: 0 }, //招生人数
-    enrollCount: { type: Number, default: 0 }, //报名人数
-    totalClassCount: { type: Number, default: 0 }, //共多少课时
-    trainPrice: { type: Number, default: 0 },
-    materialPrice: { type: Number, default: 0 },
-    teacherId: String,
-    teacherName: String,
-    courseStartDate: Date,
-    courseEndDate: Date,
-    courseTime: String,
-    courseContent: String,
-    classRoomId: String,
-    classRoomName: String,
-    schoolId: String,
-    schoolArea: String,
-    isWeixin: { type: Number, default: 0 }, //0 new 1 publish 0 stop
-    isStop: { type: Boolean, default: false },
-    isDeleted: { type: Boolean, default: false },
-    exams: [{
-        examId: String,
-        examName: String,
-        minScore: Number
-    }],
-    isFull: { type: Boolean, default: false }
-}, {
-    collection: 'trainClasss'
+const db = require('./db'),
+    config = require('./settings');
+
+const TrainClass = db.defineModel('trainClasss', {
+    name: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    yearId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    yearName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    gradeId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    gradeName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    subjectId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    subjectName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    categoryId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    categoryName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    totalStudentCount: {
+        type: db.INTEGER,
+        defaultValue: 0
+    }, //招生人数
+    enrollCount: {
+        type: db.INTEGER,
+        defaultValue: 0
+    }, //报名人数
+    totalClassCount: {
+        type: db.INTEGER,
+        defaultValue: 0
+    }, //共多少课时
+    trainPrice: {
+        type: db.DECIMAL,
+        defaultValue: 0
+    },
+    materialPrice: {
+        type: db.DECIMAL,
+        defaultValue: 0
+    },
+    teacherId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    teacherName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    attributeId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    }, //now used to check coupon, maybe change later
+    attributeName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    courseStartDate: {
+        type: db.DATE
+    },
+    courseEndDate: {
+        type: db.DATE
+    },
+    courseTime: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    courseContent: {
+        type: db.STRING(1000),
+        defaultValue: ""
+    },
+    classRoomId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    classRoomName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    schoolId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    schoolArea: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    isWeixin: {
+        type: db.INTEGER,
+        defaultValue: 0
+    }, //0 new 1 publish 9 stop, 2 originalClass(now changed)
+    isStop: {
+        type: db.BOOLEAN,
+        defaultValue: true
+    },
+    // isFull: {
+    //     type: db.BOOLEAN,
+    //     defaultValue: true
+    // }, // 感觉没用到，去掉先
+    fromClassId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    }, //原班Id
+    fromClassName: {
+        type: db.STRING(50),
+        defaultValue: ""
+    },
+    protectedDate: {
+        type: db.DATE,
+        allowNull: true
+    }, //原班原报保护期，已经没有用了
+    bookId: {
+        type: db.STRING(50),
+        defaultValue: ""
+    }, //指定教材
+    minLesson: {
+        type: db.INTEGER,
+        defaultValue: 0
+    }, //指定开始课程
+    maxLesson: {
+        type: db.INTEGER,
+        defaultValue: 0
+    } //指定结束课程
 });
+module.exports = TrainClass;
+// 分数依赖部分比较复杂，需要重新处理
 
-var trainClassModel = mongoose.model('trainClass', trainClassSchema);
 
-function TrainClass(option) {
-    this.option = option;
+//读取用户信息
+TrainClass.getFilter = function (filter) {
+    filter.isDeleted = false;
+    return TrainClass.findOne({
+        'where': filter
+    });
 };
 
-module.exports = TrainClass;
+TrainClass.getFilters = function (filter) {
+    filter.isDeleted = false;
+    return TrainClass.findAll({
+        'where': filter,
+        order: [
+            ['createdDate'],
+            ['_id']
+        ]
+    });
+};
 
-TrainClass.cancel = function(id) {
-    return trainClassModel.findOne({ _id: id, isDeleted: { $ne: true } })
-        .then(function(exam) {
-            return trainClassModel.update({
-                _id: id
-            }, {
-                $inc: { enrollCount: -1 },
-                isFull: false
-            }).exec();
-        });
+TrainClass.getFiltersWithPage = function (page, filter) {
+    filter.isDeleted = false;
+    return TrainClass.findAndCountAll({
+        'where': filter,
+        order: [
+            ['createdDate'],
+            ['_id']
+        ],
+        offset: config.pageSize * (page - 1),
+        limit: config.pageSize
+    });
 };

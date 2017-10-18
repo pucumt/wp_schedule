@@ -1,37 +1,82 @@
-var AdminEnrollTrain = require('./adminEnrollTrain.js'),
-    TrainClass = require('./trainClass.js'),
-    CouponAssign = require('./couponAssign.js'),
+var model = require('./model.js'),
+    AdminEnrollTrain = model.adminEnrollTrain,
+    TrainClass = model.trainClass,
+    CouponAssign = model.couponAssign,
     schedule = require('node-schedule'),
     settings = require('./settings.js'),
     request = require('request'),
     crypto = require('crypto');
 
 function scheduleCronstyle() {
-    schedule.scheduleJob('0 * * * * *', function() {
+    schedule.scheduleJob('0 * * * * *', function () {
         console.log('scheduleCronstyle:' + new Date());
-        AdminEnrollTrain.getUnpays().then(function(orders) {
-            if (orders && orders.length > 0) {
-                orders.forEach(function(order) {
-                    TrainClass.cancel(order.trainId)
-                        .then(function(resultTrainClass) {
-                            if (resultTrainClass && resultTrainClass.ok && resultTrainClass.nModified == 1) {
-                                AdminEnrollTrain.cancel(order._id).then(function() {
-                                    CouponAssign.release(order._id);
-                                    //send message back to swiftpass
-                                    closeOrder(order._id);
-                                });
-                            }
-                        });
-                });
-            }
-        });
+        var now = new Date();
+        now.setTime(now.getTime() - 1200000); //20 minutes
+        AdminEnrollTrain.getFilters({
+                isDeleted: false,
+                isSucceed: 1,
+                isPayed: false,
+                createdDate: {
+                    $lt: now
+                }
+            })
+            .then(function (orders) {
+                if (orders && orders.length > 0) {
+                    orders.forEach(function (order) {
+                        // 取消订单
+                        // 1. 修改课程人数
+                        // 2. 取消订单
+                        // 3. 取消使用的优惠券
+                        model.db.sequelize.transaction(function (t1) {
+                                return TrainClass.update({
+                                        enrollCount: model.db.sequelize.literal('`enrollCount`-1')
+                                    }, {
+                                        where: {
+                                            _id: order.trainId
+                                        },
+                                        transaction: t1
+                                    })
+                                    .then(function () {
+                                        return AdminEnrollTrain.update({
+                                                isSucceed: 9,
+                                                deletedBy: "system",
+                                                deletedDate: new Date()
+                                            }, {
+                                                where: {
+                                                    _id: order._id
+                                                },
+                                                transaction: t1
+                                            })
+                                            .then(function () {
+                                                return CouponAssign.update({
+                                                    isUsed: false
+                                                }, {
+                                                    where: {
+                                                        orderId: order._id
+                                                    },
+                                                    transaction: t1
+                                                });
+                                            });
+                                    });
+                            })
+                            .then(function () {
+                                //console.log("取消成功" + order._id);
+                                //send message back to swiftpass
+                                closeOrder(order._id);
+                            })
+                            .catch(function (err) {
+                                console.log("取消失败");
+                            });
+                    });
+                }
+            });
     });
 };
 
 function toxml(sendObject) {
     var keys = Object.getOwnPropertyNames(sendObject).sort();
     var xmlContent = "<xml>";
-    keys.forEach(function(key) {
+    keys.forEach(function (key) {
         xmlContent = xmlContent + "<" + key + "><![CDATA[" + sendObject[key] + "]]></" + key + ">"
     });
     xmlContent = xmlContent + "</xml>";
@@ -47,7 +92,7 @@ function closeOrder(id) {
     };
     var keys = Object.getOwnPropertyNames(sendObject).sort(),
         strPay = "";
-    keys.forEach(function(key) {
+    keys.forEach(function (key) {
         var v = sendObject[key];
         if ("sign" != key && "key" != key) {
             strPay = strPay + key + "=" + v + "&";
@@ -63,7 +108,7 @@ function closeOrder(id) {
             url: 'https://pay.swiftpass.cn:443/pay/gateway',
             body: data
         },
-        function(error, response, body) {
+        function (error, response, body) {
             if (response.statusCode == 200) {} else {}
         }
     );

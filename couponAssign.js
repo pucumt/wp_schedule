@@ -1,35 +1,90 @@
-var crypto = require('crypto');
-var mongoose = require('./db');
-var db = mongoose.connection;
+// 优惠券的分发，就是发到学生手里的优惠券
 
-var couponAssignSchema = new mongoose.Schema({
-    couponId: String,
-    couponName: String,
-    studentId: String,
-    studentName: String,
-    gradeId: String,
-    gradeName: String,
-    subjectId: String,
-    subjectName: String,
-    reducePrice: Number,
-    couponStartDate: Date,
-    couponEndDate: Date,
-    isDeleted: { type: Boolean, default: false },
-    isUsed: { type: Boolean, default: false },
-    isExpired: { type: Boolean, default: false }, //useless now
-    orderId: String //just used in train class now
-}, {
-    collection: 'couponAssigns'
+const db = require('./db'),
+    config = require('./settings');
+
+const CouponAssign = db.defineModel('couponAssigns', {
+    couponId: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    couponName: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    studentId: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    studentName: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    gradeId: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    gradeName: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    subjectId: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    subjectName: {
+        type: db.STRING(50),
+        defaultValue: ''
+    },
+    reducePrice: {
+        type: db.DECIMAL,
+        defaultValue: 0
+    },
+    couponStartDate: {
+        type: db.DATE
+    },
+    couponEndDate: {
+        type: db.DATE
+    },
+    isUsed: {
+        type: db.BOOLEAN,
+        defaultValue: false
+    },
+    orderId: {
+        type: db.STRING(50),
+        defaultValue: ''
+    } //just used in train class now
 });
-
-var couponAssignModel = mongoose.model('couponAssign', couponAssignSchema);
-
-function CouponAssign(option) {
-    this.option = option;
-};
-
 module.exports = CouponAssign;
 
-CouponAssign.release = function(orderId) {
-    return couponAssignModel.update({ orderId: orderId }, { isUsed: false, orderId: null }, { multi: true }).exec();
+//读取用户信息
+CouponAssign.getFilter = function (filter) {
+    filter.isDeleted = false;
+    return CouponAssign.findOne({
+        'where': filter
+    });
+};
+
+CouponAssign.getFilters = function (filter) {
+    filter.isDeleted = false;
+    return CouponAssign.findAll({
+        'where': filter,
+        order: [
+            ['createdDate'],
+            ['_id']
+        ]
+    });
+};
+
+CouponAssign.getFiltersWithPage = function (page, filter) {
+    filter.isDeleted = false;
+    return CouponAssign.findAndCountAll({
+        'where': filter,
+        order: [
+            ['createdDate'],
+            ['_id']
+        ],
+        offset: config.pageSize * (page - 1),
+        limit: config.pageSize
+    });
 };
