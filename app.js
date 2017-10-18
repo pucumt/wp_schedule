@@ -28,35 +28,38 @@ function scheduleCronstyle() {
                         // 2. 取消订单
                         // 3. 取消使用的优惠券
                         model.db.sequelize.transaction(function (t1) {
-                                return TrainClass.update({
-                                        enrollCount: model.db.sequelize.literal('`enrollCount`-1')
+                                return AdminEnrollTrain.update({
+                                        isSucceed: 9,
+                                        deletedBy: "system",
+                                        deletedDate: new Date()
                                     }, {
                                         where: {
-                                            _id: order.trainId
+                                            _id: order._id,
+                                            isSucceed: 1
                                         },
                                         transaction: t1
                                     })
-                                    .then(function () {
-                                        return AdminEnrollTrain.update({
-                                                isSucceed: 9,
-                                                deletedBy: "system",
-                                                deletedDate: new Date()
-                                            }, {
-                                                where: {
-                                                    _id: order._id
-                                                },
-                                                transaction: t1
-                                            })
-                                            .then(function () {
-                                                return CouponAssign.update({
-                                                    isUsed: false
+                                    .then(function (updateResult) {
+                                        if (updateResult && updateResult[0]) {
+                                            return TrainClass.update({
+                                                    enrollCount: model.db.sequelize.literal('`enrollCount`-1')
                                                 }, {
                                                     where: {
-                                                        orderId: order._id
+                                                        _id: order.trainId
                                                     },
                                                     transaction: t1
+                                                })
+                                                .then(function () {
+                                                    return CouponAssign.update({
+                                                        isUsed: false
+                                                    }, {
+                                                        where: {
+                                                            orderId: order._id
+                                                        },
+                                                        transaction: t1
+                                                    });
                                                 });
-                                            });
+                                        }
                                     });
                             })
                             .then(function () {
