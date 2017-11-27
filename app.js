@@ -64,8 +64,10 @@ function scheduleCronstyle() {
                             })
                             .then(function () {
                                 //console.log("取消成功" + order._id);
-                                //send message back to swiftpass
-                                closeOrder(order._id);
+                                if (order.payWay == 6 || order.payWay == 7) {
+                                    //send message back to swiftpass
+                                    closeOrder(order._id);
+                                }
                             })
                             .catch(function (err) {
                                 console.log("取消失败");
