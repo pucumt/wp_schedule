@@ -66,7 +66,7 @@ function scheduleCronstyle() {
                                 //console.log("取消成功" + order._id);
                                 if (order.payWay == 6 || order.payWay == 7) {
                                     //send message back to swiftpass
-                                    closeOrder(order._id);
+                                    closeOrder(order._id, order.schoolArea);
                                 }
                             })
                             .catch(function (err) {
@@ -88,13 +88,22 @@ function toxml(sendObject) {
     return xmlContent;
 };
 
-function closeOrder(id) {
-    var sendObject = {
-        'mch_id': settings.mch_id,
-        'nonce_str': 'bfbeducation',
-        'out_trade_no': id,
-        'service': 'unified.trade.close'
-    };
+function getPaySetting(schoolName) {
+    if (schoolName == "中南校区") {
+        return settings.pays.topublic;
+    } else {
+        return settings.pays.toprivate;
+    }
+};
+
+function closeOrder(id, schoolName) {
+    var paySetting = getPaySetting(schoolName),
+        sendObject = {
+            'mch_id': paySetting.mch_id,
+            'nonce_str': 'bfbeducation',
+            'out_trade_no': id,
+            'service': 'unified.trade.close'
+        };
     var keys = Object.getOwnPropertyNames(sendObject).sort(),
         strPay = "";
     keys.forEach(function (key) {
@@ -103,7 +112,7 @@ function closeOrder(id) {
             strPay = strPay + key + "=" + v + "&";
         }
     });
-    strPay = strPay + "key=" + settings.key;
+    strPay = strPay + "key=" + paySetting.key;
     var md5 = crypto.createHash('md5'),
         sign = md5.update(strPay).digest('hex').toUpperCase();
     sendObject.sign = sign;
