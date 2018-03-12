@@ -1,7 +1,9 @@
 const fs = require('fs');
 const db = require('./db');
 
-let js_files = ["adminEnrollTrain.js", "couponAssign.js", "trainClass.js"];
+let js_files = ["adminEnrollTrain.js", "adminEnrollExam.js", "examClassExamArea.js", "examClass.js",
+    "couponAssign.js", "trainClass.js"
+];
 
 module.exports = {
     models: []

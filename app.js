@@ -1,6 +1,9 @@
 var model = require('./model.js'),
     AdminEnrollTrain = model.adminEnrollTrain,
+    AdminEnrollExam = model.adminEnrollExam,
     TrainClass = model.trainClass,
+    ExamClassExamArea = model.examClassExamArea,
+    ExamClass = model.examClass,
     CouponAssign = model.couponAssign,
     schedule = require('node-schedule'),
     settings = require('./settings.js'),
@@ -12,6 +15,8 @@ function scheduleCronstyle() {
         console.log('scheduleCronstyle:' + new Date());
         var now = new Date();
         now.setTime(now.getTime() - 1200000); //20 minutes
+
+        // 课程订单取消
         AdminEnrollTrain.getFilters({
                 isDeleted: false,
                 isSucceed: 1,
@@ -67,6 +72,76 @@ function scheduleCronstyle() {
                                 if (order.payWay == 6 || order.payWay == 7) {
                                     //send message back to swiftpass
                                     closeOrder(order._id, order.schoolArea);
+                                }
+                            })
+                            .catch(function (err) {
+                                console.log("取消失败");
+                            });
+                    });
+                }
+            });
+
+        // 测试订单取消
+        AdminEnrollExam.getFilters({
+                isDeleted: false,
+                isSucceed: 1,
+                isPayed: false,
+                createdDate: {
+                    $lt: now
+                },
+                payPrice: {
+                    $gt: 0
+                }
+            })
+            .then(function (orders) {
+                if (orders && orders.length > 0) {
+                    orders.forEach(function (order) {
+                        // 取消订单
+                        // 1. 修改课程人数
+                        // 2. 取消订单
+                        // 3. 取消使用的优惠券
+                        model.db.sequelize.transaction(function (t1) {
+                                return AdminEnrollExam.update({
+                                        isSucceed: 9,
+                                        deletedBy: "system",
+                                        deletedDate: new Date()
+                                    }, {
+                                        where: {
+                                            _id: order._id,
+                                            isSucceed: 1
+                                        },
+                                        transaction: t1
+                                    })
+                                    .then(function (updateResult) {
+                                        if (updateResult && updateResult[0]) {
+                                            return ExamClassExamArea.update({
+                                                    enrollCount: model.db.sequelize.literal('`enrollCount` -1')
+                                                }, {
+                                                    where: {
+                                                        examId: order.examId,
+                                                        examAreaId: order.examAreaId,
+                                                        isDeleted: false
+                                                    },
+                                                    transaction: t1
+                                                })
+                                                .then(function () {
+                                                    return ExamClass.update({
+                                                        enrollCount: model.db.sequelize.literal('`enrollCount` -1')
+                                                    }, {
+                                                        where: {
+                                                            _id: order.examId
+                                                        },
+                                                        transaction: t1
+                                                    });
+                                                });
+                                        }
+                                    });
+                            })
+                            .then(function () {
+                                //console.log("取消成功" + order._id);
+                                if (order.payWay == 6 || order.payWay == 7) {
+                                    //send message back to swiftpass
+                                    closeOrder(order._id, "");
                                 }
                             })
                             .catch(function (err) {
