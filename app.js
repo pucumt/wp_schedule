@@ -32,7 +32,7 @@ var Wechat = {
 
 function scheduleCronstyle() {
     schedule.scheduleJob('0 0 * * * *', function () {
-        console.log("log:" + (new Date()));
+        // console.log("log:" + (new Date()));
         Wechat.getWXToken()
             .then(result => {
                 // console.log(result);
@@ -47,7 +47,7 @@ function scheduleCronstyle() {
             })
             .then(() => {
                 // model.db.sequelize.close();
-                console.log("done!");
+                // console.log("done!");
             });
     });
 };
