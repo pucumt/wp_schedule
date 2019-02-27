@@ -2,6 +2,7 @@ var model = require('./model'),
     SystemConfigure = model.systemConfigure,
     request = require('request'),
     util = require("util"),
+    schedule = require('node-schedule'),
     crypto = require('crypto');
 
 var Wechat = {
@@ -29,19 +30,26 @@ var Wechat = {
     }
 };
 
-Wechat.getWXToken()
-    .then(result => {
-        console.log(result);
-        return SystemConfigure.update({
-            value: JSON.stringify(result),
-            updatedDate: new Date()
-        }, {
-            where: {
-                name: "access_token"
-            }
-        });
-    })
-    .then(() => {
-        model.db.sequelize.close();
-        console.log("done!");
+function scheduleCronstyle() {
+    schedule.scheduleJob('0 0 * * * *', function () {
+        console.log("log:" + (new Date()));
+        Wechat.getWXToken()
+            .then(result => {
+                // console.log(result);
+                return SystemConfigure.update({
+                    value: JSON.stringify(result),
+                    updatedDate: new Date()
+                }, {
+                    where: {
+                        name: "access_token"
+                    }
+                });
+            })
+            .then(() => {
+                // model.db.sequelize.close();
+                console.log("done!");
+            });
     });
+};
+
+scheduleCronstyle();
