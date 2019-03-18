@@ -1,7 +1,7 @@
 const fs = require('fs');
 const db = require('./db');
 
-let js_files = ["systemConfigure.js"];
+let js_files = ["systemConfigure.js", "order.js", "orderSeq.js"];
 
 module.exports = {
     models: []
